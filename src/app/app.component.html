@@ -4,14 +4,25 @@
     <h2>Formulario</h2>
     
     <form [formGroup]="form" (ngSubmit)="enviarFormulario()">
+      
       <div class="form-group">
         <label>Título:</label>
-        <input type="text" formControlName="titulo" placeholder="Escribe el título">
+        <input type="text" formControlName="titulo" placeholder="Nombre el producto..." 
+               [class.input-error]="form.get('titulo')?.invalid && form.get('titulo')?.touched">
+        <!-- Error específico para el título -->
+        <span class="error-text" *ngIf="form.get('titulo')?.invalid && form.get('titulo')?.touched">
+          El título es obligatorio.
+        </span>
       </div>
       
       <div class="form-group">
         <label>Descripción:</label>
-        <textarea formControlName="descripcion" rows="6" placeholder="Escribe la descripción"></textarea>
+        <textarea formControlName="descripcion" rows="6" placeholder="Describe el producto..."
+                  [class.input-error]="form.get('descripcion')?.invalid && form.get('descripcion')?.touched"></textarea>
+        <!-- Error específico para la descripción -->
+        <span class="error-text" *ngIf="form.get('descripcion')?.invalid && form.get('descripcion')?.touched">
+          La descripción es obligatoria.
+        </span>
       </div>
       
       <div class="form-group">
@@ -19,12 +30,15 @@
         <input type="text" formControlName="linkActual" readonly placeholder="Navega por Kevins para capturar">
       </div>
       
-      <div class="mensaje-estado" *ngIf="mensajeEnvio">{{ mensajeEnvio }}</div>
+      <!-- Mensaje de estado general (Éxito o Error general) -->
+      <div class="mensaje-estado exito" *ngIf="mensajeEnvio">{{ mensajeEnvio }}</div>
+      <div class="mensaje-estado error" *ngIf="mensajeError">{{ mensajeError }}</div>
       
       <div class="form-actions">
         <button type="submit" class="btn-enviar">Enviar</button>
         <button type="button" class="btn-exportar" (click)="exportarJson()">Exportar JSON</button>
       </div>
+      
     </form>
   </div>
 
@@ -32,7 +46,6 @@
   <div class="iframe-panel">
     
     <div class="iframe-header">
-      <!-- Link Dinámico -->
       <ng-container *ngIf="form.get('linkActual')?.value as link; else linkDefault">
         <a class="iframe-link-dinamico"
            [href]="link"
@@ -43,12 +56,11 @@
         </a>
       </ng-container>
 
-      <!-- Texto Default -->
       <ng-template #linkDefault>
         <span class="iframe-link-dinamico">kevins.com.co</span>
       </ng-template>
 
-    </div>
+     </div>
     
     <div class="iframe-container" #iframeContainer>
       <iframe #miIframe [src]="iframeSafeUrl" frameborder="0" allowfullscreen></iframe>
@@ -58,5 +70,6 @@
         <p>Conectando...</p>
       </div>
     </div>
+    
   </div>
 </div>

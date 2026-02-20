@@ -96,7 +96,7 @@ app.get('/tracker.js', (req, res) => {
           // CASO 3: Ni cambio de URL ni href → reportar URL actual (sin sobreescribir)
           // NO enviamos nada para no "pisar" la URL que ya capturó getHeadScript
 
-        }, 150); // 150ms: suficiente para que cualquier router SPA procese
+        }, 150); 
 
       }, true);
 
@@ -185,7 +185,7 @@ app.use('/kevins', async (req, res) => {
   try {
     const rutaOriginal = req.url || '/';
     const urlDestino   = TARGET + rutaOriginal;
-    console.log('🔁 Proxy →', urlDestino);
+    console.log('Proxy →', urlDestino);
 
     const response = await axios.get(urlDestino, {
       responseType: 'arraybuffer',
@@ -207,7 +207,7 @@ app.use('/kevins', async (req, res) => {
     const bodyBuffer  = descomprimir(response.data, encoding);
     let   content     = bodyBuffer.toString('utf-8');
 
-    console.log(`📥 ${response.status} | ${content.length} bytes | ${contentType}`);
+    console.log(`${response.status} | ${content.length} bytes | ${contentType}`);
 
     if (contentType.includes('text/html')) {
 
@@ -263,10 +263,7 @@ app.use('/kevins', async (req, res) => {
 });
 
 app.listen(3001, () => {
-  console.log('');
   console.log('Proxy NAVEGACION LIVE');
   console.log('kevins : http://localhost:3001/kevins');
   console.log('tracker: http://localhost:3001/tracker.js');
-  console.log('Angular : http://localhost:4200');
-  console.log('');
 });

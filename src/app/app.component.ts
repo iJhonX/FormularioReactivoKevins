@@ -7,7 +7,7 @@ import {
   HostListener
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subject } from 'rxjs';
 
@@ -29,6 +29,7 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
   iframeLoaded = false;
   mensajeEnvio = '';
+  mensajeError = '';
 
   private allowedIframeOrigin = 'http://localhost:3001';
   private originalOrigin = 'https://kevins.com.co';
@@ -38,8 +39,9 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     private sanitizer: DomSanitizer
   ) {
     this.form = this.fb.group({
-      titulo: [''],
-      descripcion: [''],
+      // Agregamos Validators.required para hacer obligatorios estos campos
+      titulo: ['', Validators.required],
+      descripcion: ['', Validators.required],
       linkActual: ['Navega por Kevins para capturar links...']
     });
 
@@ -49,7 +51,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit() {
     this.miIframe.nativeElement.onload = () => {
       this.iframeLoaded = true;
-      // No tocamos linkActual aquí para no pisar el valor capturado
     };
   }
 
@@ -58,7 +59,6 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // Normaliza y quita /kevins si aparece en el path
   private normalizarKevinsUrl(input: string): string {
     if (!input) return '';
 
@@ -71,12 +71,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
 
     const limpiarPath = (p: string) => (p || '/').replace(/^\/kevins(\/|$)/i, '/');
 
-    // localhost -> kevins.com.co
     if (u.hostname === 'localhost') {
       return `${this.originalOrigin}${limpiarPath(u.pathname)}${u.search}${u.hash}`;
     }
 
-    // kevins.com.co pero contaminado con /kevins
     if (u.hostname.endsWith('kevins.com.co')) {
       return `${this.originalOrigin}${limpiarPath(u.pathname)}${u.search}${u.hash}`;
     }
@@ -84,29 +82,23 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     return u.toString().trim();
   }
 
-  // Actualiza el campo de link
   private setLinkActual(link: string) {
     const limpio = this.normalizarKevinsUrl(link);
     if (!limpio) return;
     this.form.patchValue({ linkActual: limpio }, { emitEvent: false });
   }
 
-  // Recibir link capturado del iframe (tracker)
   @HostListener('window:message', ['$event'])
   onMessageFromIframe(event: MessageEvent) {
-    // Validar origin por seguridad.
     if (event.origin !== this.allowedIframeOrigin) return;
 
     const data = event.data;
     if (!data || !data.tipo) return;
 
-    // Cuando el usuario hace click en un enlace o elemento
     if (data.tipo === 'clickReal' && data.url) {
       const linkLimpio = this.normalizarKevinsUrl(data.url);
       const urlAnterior = this.form.get('linkActual')?.value;
 
-      // Si el enlace cambia drásticamente (navegación a otra página o categoría), 
-      // limpiamos el título y descripción que el usuario había escrito.
       if (urlAnterior !== linkLimpio) {
           this.form.reset({
              titulo: '',
@@ -117,12 +109,10 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Cuando el usuario navega a otra sección del SPA (ej. categorías)
     if (data.tipo === 'navegacion' && data.url) {
        const linkLimpio = this.normalizarKevinsUrl(data.url);
        const urlAnterior = this.form.get('linkActual')?.value;
 
-       // Si es una navegación genuina a otra URL, reiniciamos el formulario
        if (urlAnterior !== linkLimpio) {
           this.form.reset({
              titulo: '',
@@ -135,12 +125,27 @@ export class AppComponent implements AfterViewInit, OnDestroy {
   }
 
   enviarFormulario() {
+    // Si el formulario es inválido, marcamos los campos como tocados para que muestren los errores
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.mostrarError('⚠️ Por favor completa los campos obligatorios.');
+      return;
+    }
+
     const payload = this.crearPayload();
     console.log('Formulario (local):', payload);
-    this.mostrarMensaje('Registro exitoso!');
+    this.mostrarMensaje('Registro exitoso ✅');
+
   }
 
   exportarJson() {
+    // También validamos al intentar exportar el JSON
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.mostrarError('⚠️ No se puede exportar: faltan campos obligatorios.');
+      return;
+    }
+
     const payload = this.crearPayload();
     const jsonStr = JSON.stringify(payload, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
@@ -157,7 +162,8 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    this.mostrarMensaje('JSON exportado');
+    this.mostrarMensaje('JSON exportado correctamente✅');
+
   }
 
   private crearPayload() {
@@ -166,12 +172,19 @@ export class AppComponent implements AfterViewInit, OnDestroy {
       titulo: (v.titulo ?? '').toString().trim(),
       descripcion: (v.descripcion ?? '').toString().trim(),
       link: this.normalizarKevinsUrl((v.linkActual ?? '').toString().trim()),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toLocaleDateString()
     };
   }
 
   private mostrarMensaje(msg: string) {
+    this.mensajeError = ''; // Limpiar errores
     this.mensajeEnvio = msg;
-    setTimeout(() => (this.mensajeEnvio = ''), 3000);
+    setTimeout(() => (this.mensajeEnvio = ''), 3500);
+  }
+
+  private mostrarError(msg: string) {
+    this.mensajeEnvio = ''; // Limpiar mensaje de éxito
+    this.mensajeError = msg;
+    setTimeout(() => (this.mensajeError = ''), 4000);
   }
 }

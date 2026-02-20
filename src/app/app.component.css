@@ -45,8 +45,8 @@
   cursor: pointer;
 }
 
-.btn-enviar { background: #28a745; color: #fff; }
-.btn-exportar { background: #fd7e14; color: #fff; }
+.btn-enviar { background: #dfc055; color: #fff; }
+.btn-exportar { background: #8f8d8c; color: #fff; }
 
 .mensaje-estado {
   padding: 10px 12px;
