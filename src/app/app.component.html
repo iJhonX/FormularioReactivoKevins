@@ -4,41 +4,71 @@
     <h2>Formulario</h2>
     
     <form [formGroup]="form" (ngSubmit)="enviarFormulario()">
+
+      <div class="form-group">
+        <label>Link actual:</label>
+        <input type="text" formControlName="linkActual" readonly placeholder="Navega por Kevins para capturar">
+      </div>
       
       <div class="form-group">
         <label>Título:</label>
         <input type="text" formControlName="titulo" placeholder="Nombre el producto..." 
                [class.input-error]="form.get('titulo')?.invalid && form.get('titulo')?.touched">
-        <!-- Error específico para el título -->
-        <span class="error-text" *ngIf="form.get('titulo')?.invalid && form.get('titulo')?.touched">
-          El título es obligatorio.
-        </span>
       </div>
       
       <div class="form-group">
         <label>Descripción:</label>
         <textarea formControlName="descripcion" rows="6" placeholder="Describe el producto..."
                   [class.input-error]="form.get('descripcion')?.invalid && form.get('descripcion')?.touched"></textarea>
-        <!-- Error específico para la descripción -->
-        <span class="error-text" *ngIf="form.get('descripcion')?.invalid && form.get('descripcion')?.touched">
-          La descripción es obligatoria.
-        </span>
       </div>
-      
+
       <div class="form-group">
-        <label>Link actual:</label>
-        <input type="text" formControlName="linkActual" readonly placeholder="Navega por Kevins para capturar">
+        <label>Keywords:</label>
+        <input type="text" formControlName="keywords"
+        placeholder="Palabras clave...">
       </div>
       
+    
       <!-- Mensaje de estado general (Éxito o Error general) -->
       <div class="mensaje-estado exito" *ngIf="mensajeEnvio">{{ mensajeEnvio }}</div>
       <div class="mensaje-estado error" *ngIf="mensajeError">{{ mensajeError }}</div>
       
-      <div class="form-actions">
+      <div class="form-actions">                                                                                                                                                                                                           
         <button type="submit" class="btn-enviar">Enviar</button>
         <button type="button" class="btn-exportar" (click)="exportarJson()">Exportar JSON</button>
       </div>
       
+          <!-- Lista de registros guardados -->
+    <!-- Lista de registros guardados con BUSCADOR -->
+    <div class="registros-panel" *ngIf="registrosGuardados.length > 0">
+      
+      <h3>📋 Registros ({{ registrosGuardados.length }})</h3>
+
+      <!-- Buscador -->
+      <div class="buscador-container">
+        <input type="text" [(ngModel)]="textoBusqueda" [ngModelOptions]="{standalone: true}" 
+               placeholder="Buscar registro..." class="input-buscador">
+      </div>
+
+      <!-- Recorremos registrosFiltrados y pasamos el objeto completo al eliminar -->
+      <div class="registro-item" *ngFor="let registro of registrosFiltrados">
+        <div class="registro-info">
+          <span class="registro-titulo">{{ registro.titulo }}</span>
+          <span class="registro-link">{{ registro.link }}</span>
+        </div>
+        <button type="button" class="btn-eliminar" (click)="eliminarRegistro(registro)" title="Eliminar este registro">
+          🗑️
+        </button>
+      </div>
+      
+      <!-- Mensaje si la búsqueda no encuentra nada (solo si has escrito algo) -->
+      <div *ngIf="registrosFiltrados.length === 0 && textoBusqueda.trim() !== ''" class="sin-resultados">
+        No se encontraron coincidencias para "{{ textoBusqueda }}"
+      </div>
+
+
+    </div>
+
     </form>
   </div>
 
