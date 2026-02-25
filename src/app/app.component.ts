@@ -20,6 +20,7 @@ import { takeUntil } from 'rxjs/operators';
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
+
 export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('miIframe') miIframe!: ElementRef<HTMLIFrameElement>;
 
@@ -110,6 +111,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
         // Aplicamos los cambios de validación sin disparar un loop infinito
         tituloControl?.updateValueAndValidity({ emitEvent: false });
+        descControl?.updateValueAndValidity({ emitEvent: false });
         descControl?.updateValueAndValidity({ emitEvent: false });
       });
       
@@ -262,7 +264,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     const dataDescripciones = registrosAExportar.map(r => ({ descripcion: r.descripcion, link: r.link }));
     const dataKeywords = registrosAExportar.map(r => ({ keywords: r.keywords, link: r.link }));
 
-    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const ts = new Date().toLocaleString().replace(/[:.]/g, '-').slice(0, 19);
 
     // 4. FUNCIÓN AUXILIAR PARA DESCARGAR UN ARCHIVO
     const descargarArchivo = (data: any[], nombreArchivo: string) => {
@@ -318,7 +320,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private mostrarError(msg: string) {
-    this.mensajeEnvio = ''; 
+    this.mensajeEnvio = '';
     this.mensajeError = msg;
     setTimeout(() => (this.mensajeError = ''), 4000);
   }
