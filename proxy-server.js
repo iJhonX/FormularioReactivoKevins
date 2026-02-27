@@ -228,6 +228,7 @@ app.use('/kevins', async (req, res) => {
         content = content.replace('<HEAD>', `<HEAD>${baseTag}${headScript}`);
       } else {
         content = baseTag + headScript + content;
+        
       }
 
       // Tracker al final

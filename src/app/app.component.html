@@ -1,96 +1,94 @@
 <div class="container">
+  
   <!-- IZQUIERDA: Formulario -->
   <div class="form-panel">
     <h2>Formulario</h2>
     
     <form [formGroup]="form" (ngSubmit)="enviarFormulario()">
-
-      <div class="form-group">
-        <label>Link actual:</label>
-        <input type="text" formControlName="linkActual" readonly placeholder="Navega por Kevins para capturar">
-      </div>
       
       <div class="form-group">
-        <label>Título:</label>
+        <label>Link actual</label>
+        <input type="text" formControlName="linkActual" readonly placeholder="Navega por Kevins para capturar...">
+      </div>
+
+      <div class="form-group">
+        <label>Título</label>
         <input type="text" formControlName="titulo" placeholder="Nombre el producto..." 
                [class.input-error]="form.get('titulo')?.invalid && form.get('titulo')?.touched">
       </div>
-      
+
       <div class="form-group">
-        <label>Descripción:</label>
+        <label>Descripción</label>
         <textarea formControlName="descripcion" rows="6" placeholder="Describe el producto..."
                   [class.input-error]="form.get('descripcion')?.invalid && form.get('descripcion')?.touched"></textarea>
       </div>
 
       <div class="form-group">
-        <label>Keywords:</label>
-        <input type="text" formControlName="keywords"
-        placeholder="Palabras clave...">
+        <label>Keywords</label>
+        <input type="text" formControlName="keywords" placeholder="Palabras clave...">
       </div>
-      
-    
-      <!-- Mensaje de estado general (Éxito o Error general) -->
+
+      <!-- Mensaje de estado general (éxito o Error general) -->
       <div class="mensaje-estado exito" *ngIf="mensajeEnvio">{{ mensajeEnvio }}</div>
       <div class="mensaje-estado error" *ngIf="mensajeError">{{ mensajeError }}</div>
-      
-      <div class="form-actions">                                                                                                                                                                                                           
+
+      <div class="form-actions">
         <button type="submit" class="btn-enviar">Enviar</button>
-        <button type="button" class="btn-exportar" (click)="exportarJson()">Exportar JSON</button>
-      </div>
-      
-    <!-- Lista de registros guardados con BUSCADOR -->
-    <div class="registros-panel" *ngIf="registrosGuardados.length > 0">
-      
-      <h3>📋 Registros ({{ registrosGuardados.length }})</h3>
-
-      <!-- Buscador -->
-      <div class="buscador-container">
-        <input type="text" [(ngModel)]="textoBusqueda" [ngModelOptions]="{standalone: true}" 
-               placeholder="Buscar registro..." class="input-buscador">
+        <button type="button" class="btn-exportar" (click)="exportarJson()">Exportar</button>
       </div>
 
-      <!-- Recorremos registrosFiltrados y pasamos el objeto completo al eliminar -->
-      <div class="registro-item" *ngFor="let registro of registrosFiltrados">
-        <div class="registro-info">
-          <span class="registro-titulo">{{ registro.titulo }}</span>
-          <span class="registro-link">{{ registro.link }}</span>
+      <!-- Lista de registros guardados con BUSCADOR -->
+      <div class="registros-panel" *ngIf="registrosGuardados.length > 0">
+        <h3>📋 Registros ({{ registrosGuardados.length }})</h3>
+        
+        <!-- Buscador -->
+        <div class="buscador-container">
+          <input 
+            type="text" 
+            [(ngModel)]="textoBusqueda" 
+            [ngModelOptions]="{standalone: true}" 
+            placeholder="Buscar registro..." 
+            class="input-buscador"
+          />
         </div>
-        <button type="button" class="btn-eliminar" (click)="eliminarRegistro(registro)" title="Eliminar este registro">
-          🗑️
-        </button>
+
+        <!-- Recorremos registrosFiltrados -->
+        <div class="registro-item" *ngFor="let registro of registrosFiltrados">
+          <div class="registro-info">
+            <span class="registro-titulo">{{ registro.titulo }}</span>
+            <span class="registro-link">{{ registro.link }}</span>
+          </div>
+          <button type="button" class="btn-eliminar" (click)="eliminarRegistro(registro)" title="Eliminar este registro">🗑️</button>
+        </div>
+
+        <!-- Mensaje si la búsqueda no encuentra nada -->
+        <div *ngIf="registrosFiltrados.length === 0 && textoBusqueda.trim() !== ''" class="sin-resultados">
+          No se encontraron coincidencias para "{{ textoBusqueda }}"
+        </div>
+
       </div>
-      
-      <!-- Mensaje si la búsqueda no encuentra nada (solo si has escrito algo) -->
-      <div *ngIf="registrosFiltrados.length === 0 && textoBusqueda.trim() !== ''" class="sin-resultados">
-        No se encontraron coincidencias para "{{ textoBusqueda }}"
-      </div>
-
-
-    </div>
-
     </form>
   </div>
 
   <!-- DERECHA: Iframe -->
   <div class="iframe-panel">
     
+    <!-- BARRA DE NAVEGACIÓN EDITABLE -->
     <div class="iframe-header">
-      <ng-container *ngIf="form.get('linkActual')?.value as link; else linkDefault">
-        <a class="iframe-link-dinamico"
-           [href]="link"
-           target="_blank"
-           rel="noopener noreferrer"
-           [title]="link">
-           {{ link }}
-        </a>
-      </ng-container>
+      <div class="url-bar">
+        <span class="url-base">{{ urlBaseKevins }}</span>
+        <input 
+          type="text" 
+          class="url-input"
+          [(ngModel)]="rutaEditable" 
+          (keyup.enter)="actualizarFrameManual()"
+          (blur)="actualizarFrameManual()"
+          placeholder="ruta"
+        />
+        <button class="btn-ir" (click)="actualizarFrameManual()">Ir</button>
+      </div>
+    </div>
 
-      <ng-template #linkDefault>
-        <span class="iframe-link-dinamico">kevins.com.co</span>
-      </ng-template>
-
-     </div>
-    
     <div class="iframe-container" #iframeContainer>
       <iframe #miIframe [src]="iframeSafeUrl" frameborder="0" allowfullscreen></iframe>
       
@@ -99,6 +97,5 @@
         <p>Conectando...</p>
       </div>
     </div>
-    
   </div>
 </div>

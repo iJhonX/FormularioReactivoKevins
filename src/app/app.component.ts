@@ -1,12 +1,4 @@
-import {
-  Component,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
-  OnDestroy,
-  OnInit,
-  HostListener
-} from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewInit, OnDestroy, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -20,17 +12,21 @@ import { takeUntil } from 'rxjs/operators';
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-
 export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('miIframe') miIframe!: ElementRef<HTMLIFrameElement>;
-
+  
   form: FormGroup;
   private destroy$ = new Subject<void>();
-
-  iframeUrl = 'http://localhost:3001/kevins';
-  iframeSafeUrl: SafeResourceUrl;
-
+  
+  // URL base para el iframe local y dominios permitidos
+  iframeUrl = 'http://localhost:3001/kevins/';
+  iframeSafeUrl!: SafeResourceUrl;
   iframeLoaded = false;
+  
+  // Variables para la barra de navegación personalizada
+  urlBaseKevins = 'https://kevins.com.co/';
+  rutaEditable = ''; 
+
   mensajeEnvio = '';
   mensajeError = '';
 
@@ -42,12 +38,9 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   textoBusqueda: string = '';
 
   get registrosFiltrados() {
-    // Si el buscador está vacío, NO mostramos nada
     if (!this.textoBusqueda || this.textoBusqueda.trim() === '') {
       return [];
     }
-    
-    // Si hay texto, filtramos y mostramos las coincidencias
     const texto = this.textoBusqueda.toLowerCase();
     return this.registrosGuardados.filter(registro => 
       (registro.titulo && registro.titulo.toLowerCase().includes(texto)) ||
@@ -57,15 +50,11 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-
-  constructor(
-    private fb: FormBuilder,
-    private sanitizer: DomSanitizer
-  ) {
+  constructor(private fb: FormBuilder, private sanitizer: DomSanitizer) {
     this.form = this.fb.group({
       titulo: ['', Validators.required],
       descripcion: ['', Validators.required],
-      keywords: [''], 
+      keywords: [''],
       linkActual: ['Navega por Kevins para capturar links...']
     });
 
@@ -73,49 +62,37 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    // 1. CARGAR DATOS PREVIOS AL INICIAR LA PÁGINA
-    
-    // Cargar la lista de registros acumulados
     const registrosGuardadosLocal = localStorage.getItem('kevins_registros');
     if (registrosGuardadosLocal) {
       this.registrosGuardados = JSON.parse(registrosGuardadosLocal);
     }
 
-    // Cargar lo que el usuario estaba escribiendo en el formulario
     const formGuardadoLocal = localStorage.getItem('kevins_formulario_actual');
     if (formGuardadoLocal) {
       this.form.patchValue(JSON.parse(formGuardadoLocal), { emitEvent: false });
     }
 
-    // 2. GUARDAR EL FORMULARIO AUTOMÁTICAMENTE MIENTRAS SE ESCRIBE Y MANEJAR VALIDACIONES
     this.form.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(values => {
-        // Guardar en localStorage temporal
         localStorage.setItem('kevins_formulario_actual', JSON.stringify(values));
 
-        // 👇 NUEVA LÓGICA: Validación condicional
         const tituloControl = this.form.get('titulo');
         const descControl = this.form.get('descripcion');
         const keywordsValue = values.keywords ? values.keywords.trim() : '';
 
         if (keywordsValue.length > 0) {
-          // Si hay keywords, quitamos la obligación de título y descripción
           tituloControl?.clearValidators();
           descControl?.clearValidators();
         } else {
-          // Si NO hay keywords, título y descripción vuelven a ser obligatorios
           tituloControl?.setValidators([Validators.required]);
           descControl?.setValidators([Validators.required]);
         }
 
-        // Aplicamos los cambios de validación sin disparar un loop infinito
         tituloControl?.updateValueAndValidity({ emitEvent: false });
-        descControl?.updateValueAndValidity({ emitEvent: false });
         descControl?.updateValueAndValidity({ emitEvent: false });
       });
       
-      // Forzar la validación inicial por si había datos cargados del localStorage
       this.form.updateValueAndValidity({ emitEvent: false });
   }
 
@@ -130,9 +107,21 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  actualizarFrameManual() {
+    let rutaLimpia = this.rutaEditable;
+    if (rutaLimpia.startsWith('/')) {
+      rutaLimpia = rutaLimpia.substring(1);
+    }
+
+    const nuevaUrlLocal = `${this.iframeUrl}${rutaLimpia}`;
+    this.iframeSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(nuevaUrlLocal);
+    
+    const urlOficial = `${this.urlBaseKevins}${rutaLimpia}`;
+    this.form.patchValue({ linkActual: urlOficial }, { emitEvent: false });
+  }
+
   private normalizarKevinsUrl(input: string): string {
     if (!input) return '';
-
     let u: URL;
     try {
       u = new URL(input, this.originalOrigin);
@@ -140,14 +129,15 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       return input.trim();
     }
 
-    const limpiarPath = (p: string) => (p || '/').replace(/^\/kevins(\/|$)/i, '/');
+    const limpiarPath = (p: string): string => {
+      return p.replace(/^\/kevins/i, '');
+    };
 
     if (u.hostname === 'localhost') {
-      return `${this.originalOrigin}${limpiarPath(u.pathname)}${u.search}${u.hash}`;
+      return this.originalOrigin + limpiarPath(u.pathname) + u.search + u.hash;
     }
-
     if (u.hostname.endsWith('kevins.com.co')) {
-      return `${this.originalOrigin}${limpiarPath(u.pathname)}${u.search}${u.hash}`;
+      return this.originalOrigin + limpiarPath(u.pathname) + u.search + u.hash;
     }
 
     return u.toString().trim();
@@ -160,81 +150,79 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     const data = event.data;
     if (!data || !data.tipo) return;
 
-    if (data.tipo === 'clickReal' && data.url) {
+    if (data.tipo === 'clickReal' || data.tipo === 'navegacion') {
       const linkLimpio = this.normalizarKevinsUrl(data.url);
       const urlAnterior = this.form.get('linkActual')?.value;
 
       if (urlAnterior !== linkLimpio) {
+        
+        const registroExistente = this.registrosGuardados.find(r => r.link === linkLimpio);
+
+        if (registroExistente) {
+          this.form.patchValue({
+            titulo: registroExistente.titulo || '',
+            descripcion: registroExistente.descripcion || '',
+            keywords: registroExistente.keywords || '',
+            linkActual: linkLimpio
+          }, { emitEvent: true });
+          
+          this.mostrarMensaje('Cargando datos guardados previamente...');
+        } else {
           this.form.reset({
-             titulo: '',
-             descripcion: '',
-             keywords: '',
-             linkActual: linkLimpio
-          }, { emitEvent: true }); // Emitimos evento para que guarde en LocalStorage
+            titulo: '',
+            descripcion: '',
+            keywords: '',
+            linkActual: linkLimpio
+          }, { emitEvent: true });
+        }
+        
+        try {
+          const urlObj = new URL(linkLimpio);
+          let path = urlObj.pathname + urlObj.search + urlObj.hash;
+          if (path.startsWith('/')) path = path.substring(1);
+          this.rutaEditable = path;
+        } catch(e) {}
       }
       return;
-    }
-
-    if (data.tipo === 'navegacion' && data.url) {
-       const linkLimpio = this.normalizarKevinsUrl(data.url);
-       const urlAnterior = this.form.get('linkActual')?.value;
-
-       if (urlAnterior !== linkLimpio) {
-          this.form.reset({
-             titulo: '',
-             descripcion: '',
-             keywords: '',
-             linkActual: linkLimpio
-          }, { emitEvent: true }); // Emitimos evento para que guarde en LocalStorage
-       }
-       return;
     }
   }
 
   enviarFormulario() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.mostrarError('⚠️ Por favor completa los campos obligatorios.');
+      this.mostrarError('Por favor completa los campos obligatorios.');
       return;
     }
 
     const payload = this.crearPayload();
-
-    // Buscar si ya existe un registro con el mismo link
     const indexExistente = this.registrosGuardados.findIndex(r => r.link === payload.link);
 
     if (indexExistente !== -1) {
-      // El link ya existe: actualizamos solo los campos que venían vacíos en el registro
       const registroExistente = this.registrosGuardados[indexExistente];
-
-      const huboActualizacion =
-        (!registroExistente.titulo    && payload.titulo)    ||
-        (!registroExistente.descripcion && payload.descripcion) ||
-        (!registroExistente.keywords  && payload.keywords);
+      const huboActualizacion = (!registroExistente.titulo && payload.titulo) || 
+                                (!registroExistente.descripcion && payload.descripcion) || 
+                                (!registroExistente.keywords && payload.keywords) ||
+                                (registroExistente.titulo !== payload.titulo) || 
+                                (registroExistente.descripcion !== payload.descripcion) || 
+                                (registroExistente.keywords !== payload.keywords);
 
       if (!huboActualizacion) {
-        // Todos los campos ya tenían datos: no permitir duplicado
-        this.mostrarError('⚠️ Ya existe un registro completo para este link.');
+        this.mostrarError('Este registro ya está guardado con estos mismos datos.');
         return;
       }
 
-      // Actualizar solo los campos que estaban vacíos
-      if (!registroExistente.titulo    && payload.titulo)    registroExistente.titulo = payload.titulo;
-      if (!registroExistente.descripcion && payload.descripcion) registroExistente.descripcion = payload.descripcion;
-      if (!registroExistente.keywords  && payload.keywords)  registroExistente.keywords = payload.keywords;
+      registroExistente.titulo = payload.titulo;
+      registroExistente.descripcion = payload.descripcion;
+      registroExistente.keywords = payload.keywords;
 
-      // Guardar en localStorage el arreglo actualizado
       localStorage.setItem('kevins_registros', JSON.stringify(this.registrosGuardados));
-      this.mostrarMensaje(`✅ Registro actualizado (Total: ${this.registrosGuardados.length})`);
-
+      this.mostrarMensaje(`Registro actualizado | Total: ${this.registrosGuardados.length}`);
     } else {
-      // El link NO existe: agregar como nuevo registro
       this.registrosGuardados.push(payload);
       localStorage.setItem('kevins_registros', JSON.stringify(this.registrosGuardados));
-      this.mostrarMensaje(`✅ Guardado en la lista (Total: ${this.registrosGuardados.length})`);
+      this.mostrarMensaje(`Guardado en la lista | Total: ${this.registrosGuardados.length}`);
     }
 
-    // Limpiar formulario pero mantener el link actual
     const linkActual = this.form.get('linkActual')?.value;
     this.form.reset({
       titulo: '',
@@ -244,34 +232,79 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-    exportarJson() {
-    // 1. CLONAMOS LA LISTA ACTUAL PARA NO MODIFICAR LA ORIGINAL
+  eliminarRegistro(registroAEliminar: any) {
+    const indexReal = this.registrosGuardados.findIndex(r => r === registroAEliminar);
+    if (indexReal !== -1) {
+      this.registrosGuardados.splice(indexReal, 1);
+      localStorage.setItem('kevins_registros', JSON.stringify(this.registrosGuardados));
+      this.mostrarMensaje(`Registro eliminado | Quedan: ${this.registrosGuardados.length}`);
+    }
+  }
+
+  // =====================================================================
+  // NUEVAS FUNCIONES DE EXPORTACIÓN PARA FORMATO NGINX
+  // =====================================================================
+
+  private extraerLlaveDeUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      let path = urlObj.pathname;
+      path = path.replace(/^\/kevins\//i, '/');
+      return path === '' ? '/' : path;
+    } catch {
+      let limpia = url.replace(/https?:\/\/[^\/]+/i, '');
+      limpia = limpia.replace(/^\/kevins/i, '');
+      if (!limpia.startsWith('/')) limpia = '/' + limpia;
+      return limpia;
+    }
+  }
+
+  private escaparTextoNginx(texto: string): string {
+    if (!texto) return '';
+    return texto.replace(/"/g, '\\"').replace(/'/g, "\\'");
+  }
+
+  exportarJson() {
     const registrosAExportar = [...this.registrosGuardados];
 
-    // 2. SI HAY UN FORMULARIO VÁLIDO A MEDIO ESCRIBIR, LO INCLUIMOS TEMPORALMENTE EN LA EXPORTACIÓN 
-    // PERO NO LO BORRAMOS VISUALMENTE NI LO METEMOS EN LA LISTA OFICIAL
-    if (this.form.valid && (this.form.value.titulo || this.form.value.descripcion || this.form.value.keywords)) {
+    if (this.form.valid && (this.form.value.titulo || this.form.value.descripcion)) {
       registrosAExportar.push(this.crearPayload());
     }
 
     if (registrosAExportar.length === 0) {
-      this.mostrarError('⚠️ No hay ningún registro guardado para exportar.');
+      this.mostrarError('No hay ningún registro guardado para exportar.');
       return;
     }
 
-    // 3. DIVIDIR LOS DATOS EN 3 ARREGLOS DISTINTOS USANDO LA COPIA
-    const dataTitulos = registrosAExportar.map(r => ({ titulo: r.titulo, link: r.link }));
-    const dataDescripciones = registrosAExportar.map(r => ({ descripcion: r.descripcion, link: r.link }));
-    const dataKeywords = registrosAExportar.map(r => ({ keywords: r.keywords, link: r.link }));
+    // TÍTULOS
+    let titulosConf = 'map $seo_key $page_meta_title {\n';
+    titulosConf += '    default "Kevin\\\'s Joyeros | Colombia";\n';
+    
+    registrosAExportar.forEach(r => {
+      if (r.titulo) {
+        const llave = this.extraerLlaveDeUrl(r.link);
+        const tituloSeguro = this.escaparTextoNginx(r.titulo);
+        titulosConf += `    "${llave}" "${tituloSeguro}";\n`;
+      }
+    });
+    titulosConf += '}\n';
 
-    const ts = new Date().toLocaleString().replace(/[:.]/g, '-').slice(0, 19);
+    // DESCRIPCIONES
+    let descripcionesConf = 'map $seo_key $page_meta_desc {\n';
+    descripcionesConf += '    default "Kevin\\\'s Joyeros es una joyería colombiana que ofrece una amplia variedad de joyas de alta calidad, incluyendo anillos, pulseras, collares y aretes. Descubre nuestras colecciones exclusivas y encuentra la joya perfecta para cada ocasión.";\n';
+    
+    registrosAExportar.forEach(r => {
+      if (r.descripcion) {
+        const llave = this.extraerLlaveDeUrl(r.link);
+        const descSegura = this.escaparTextoNginx(r.descripcion);
+        descripcionesConf += `    "${llave}" "${descSegura}";\n`;
+      }
+    });
+    descripcionesConf += '}\n';
 
-    // 4. FUNCIÓN AUXILIAR PARA DESCARGAR UN ARCHIVO
-    const descargarArchivo = (data: any[], nombreArchivo: string) => {
-      const jsonStr = JSON.stringify(data, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+    const descargarArchivo = (contenido: string, nombreArchivo: string) => {
+      const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-      
       const a = document.createElement('a');
       a.href = url;
       a.download = nombreArchivo;
@@ -281,27 +314,15 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       URL.revokeObjectURL(url);
     };
 
-    // 5. DESCARGAR LOS 3 ARCHIVOS SIMULTÁNEAMENTE
-    descargarArchivo(dataTitulos, `titulos-${ts}.json`);
-    descargarArchivo(dataDescripciones, `descripciones-${ts}.json`);
-    descargarArchivo(dataKeywords, `keywords-${ts}.json`);
+    const ts = new Date().toLocaleString();
 
-    this.mostrarMensaje(`✅ 3 archivos exportados (${registrosAExportar.length} registros)`);
+    descargarArchivo(titulosConf, `titulos-${ts}.conf`);
+    descargarArchivo(descripcionesConf, `descripciones-${ts}.conf`);
 
-    // ⚠️ YA NO LIMPIAMOS NADA: 
-    // - El formulario mantiene lo que escribiste
-    // - La lista de localStorage se mantiene intacta
+    this.mostrarMensaje(`2 archivos .conf exportados (${registrosAExportar.length} registros)`);
   }
 
-  eliminarRegistro(registroAEliminar: any) {
-    const indexReal = this.registrosGuardados.findIndex(r => r === registroAEliminar);
-    if (indexReal !== -1) {
-      this.registrosGuardados.splice(indexReal, 1);
-      localStorage.setItem('kevins_registros', JSON.stringify(this.registrosGuardados));
-      this.mostrarMensaje(`🗑️ Registro eliminado (Quedan: ${this.registrosGuardados.length})`);
-    }
-  }
-
+  // =====================================================================
 
   private crearPayload() {
     const v = this.form.getRawValue();
@@ -314,14 +335,14 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private mostrarMensaje(msg: string) {
-    this.mensajeError = ''; 
+    this.mensajeError = '';
     this.mensajeEnvio = msg;
-    setTimeout(() => (this.mensajeEnvio = ''), 3500);
+    setTimeout(() => this.mensajeEnvio = '', 3500);
   }
 
   private mostrarError(msg: string) {
     this.mensajeEnvio = '';
     this.mensajeError = msg;
-    setTimeout(() => (this.mensajeError = ''), 4000);
+    setTimeout(() => this.mensajeError = '', 4000);
   }
 }
