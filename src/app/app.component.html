@@ -54,10 +54,13 @@
 
         <!-- Recorremos registrosFiltrados -->
         <div class="registro-item" *ngFor="let registro of registrosFiltrados">
-          <div class="registro-info">
-            <span class="registro-titulo">{{ registro.titulo }}</span>
+          
+          <!-- Hacemos clicable todo este bloque para seleccionar -->
+          <div class="registro-info" (click)="seleccionarRegistro(registro)" title="Clic para cargar este registro">
+            <span class="registro-titulo">{{ registro.titulo || 'Sin título' }}</span>
             <span class="registro-link">{{ registro.link }}</span>
           </div>
+          
           <button type="button" class="btn-eliminar" (click)="eliminarRegistro(registro)" title="Eliminar este registro">🗑️</button>
         </div>
 

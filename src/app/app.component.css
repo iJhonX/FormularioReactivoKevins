@@ -229,22 +229,51 @@
   margin-bottom: 6px;
 }
 
+/* --- ESTILOS DE LA LISTA DE REGISTROS --- */
+
 .registro-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f8f9fa;
+  background: #ffffff;
   border: 1px solid #e9ecef;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 6px 12px;
   gap: 10px;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+/* Efecto hover sobre todo el contenedor del registro */
+.registro-item:hover {
+  border-color: #bbdefb;
+  box-shadow: 0 4px 12px rgba(0, 87, 183, 0.1);
+  transform: translateY(-1px);
 }
 
 .registro-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   overflow: hidden;
+  flex-grow: 1;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.registro-info:hover {
+  background-color: #f0f7ff;
+}
+
+.registro-info:active {
+  background-color: #e0efff;
+  transform: scale(0.99);
+}
+
+.registro-item:hover .registro-titulo {
+  color: #0057b7;
 }
 
 .registro-titulo {
@@ -254,6 +283,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 0.2s;
 }
 
 .registro-link {

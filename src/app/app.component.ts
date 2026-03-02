@@ -242,10 +242,43 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // =====================================================================
-  // NUEVAS FUNCIONES DE EXPORTACIÓN PARA FORMATO NGINX
+  // SELECCIONAR UN REGISTRO DE LA LISTA
+  // =====================================================================
+  seleccionarRegistro(registro: any) {
+    // 1. Rellenar el formulario con los datos del registro
+    this.form.patchValue({
+      titulo: registro.titulo || '',
+      descripcion: registro.descripcion || '',
+      keywords: registro.keywords || '',
+      linkActual: registro.link || ''
+    }, { emitEvent: true });
+
+    // 2. Extraer la ruta de la URL para actualizar el iframe
+    let path = '';
+    try {
+      const urlObj = new URL(registro.link);
+      path = urlObj.pathname + urlObj.search + urlObj.hash;
+    } catch {
+      // Si no es una URL completa, intentamos limpiarla
+      path = registro.link.replace(/https?:\/\/[^\/]+/i, '');
+    }
+
+    // Aseguramos que la ruta no tenga el /kevins/ ni el slash inicial
+    let rutaLimpia = path.replace(/^\/kevins\//i, '/').replace(/^\//, '');
+    
+    // 3. Actualizamos la barra de navegación editable y el iframe
+    this.rutaEditable = rutaLimpia;
+    const nuevaUrlLocal = `${this.iframeUrl}${rutaLimpia}`;
+    this.iframeSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(nuevaUrlLocal);
+    
+    this.mostrarMensaje('Registro cargado y navegando a la URL...');
+  }
+
+  // =====================================================================
+  // EXPORTACIÓN PARA FORMATO NGINX
   // =====================================================================
 
-  private extraerLlaveDeUrl(url: string): string {
+  private extraerLlaveDeUrlExport(url: string): string {
     try {
       const urlObj = new URL(url);
       let path = urlObj.pathname;
@@ -282,7 +315,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     
     registrosAExportar.forEach(r => {
       if (r.titulo) {
-        const llave = this.extraerLlaveDeUrl(r.link);
+        const llave = this.extraerLlaveDeUrlExport(r.link);
         const tituloSeguro = this.escaparTextoNginx(r.titulo);
         titulosConf += `    "${llave}" "${tituloSeguro}";\n`;
       }
@@ -295,7 +328,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     
     registrosAExportar.forEach(r => {
       if (r.descripcion) {
-        const llave = this.extraerLlaveDeUrl(r.link);
+        const llave = this.extraerLlaveDeUrlExport(r.link);
         const descSegura = this.escaparTextoNginx(r.descripcion);
         descripcionesConf += `    "${llave}" "${descSegura}";\n`;
       }
@@ -314,15 +347,13 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       URL.revokeObjectURL(url);
     };
 
-    const ts = new Date().toLocaleString();
+    const ts = new Date().toLocaleString().replace(/[\/\:\s]/g, '-').slice(0, 19);
 
     descargarArchivo(titulosConf, `titulos-${ts}.conf`);
     descargarArchivo(descripcionesConf, `descripciones-${ts}.conf`);
 
     this.mostrarMensaje(`2 archivos .conf exportados (${registrosAExportar.length} registros)`);
   }
-
-  // =====================================================================
 
   private crearPayload() {
     const v = this.form.getRawValue();
