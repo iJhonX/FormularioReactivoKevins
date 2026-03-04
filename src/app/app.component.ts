@@ -25,7 +25,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   
   // Variables para la barra de navegación personalizada
   urlBaseKevins = 'https://kevins.com.co/';
-  rutaEditable = ''; 
+  rutaEditable = '';
+  ultimaUrlLocal = '';
 
   mensajeEnvio = '';
   mensajeError = '';
@@ -57,7 +58,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       keywords: [''],
       linkActual: ['Navega por Kevins para capturar links...']
     });
-
+    this.ultimaUrlLocal = this.iframeUrl
     this.iframeSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.iframeUrl);
   }
 
@@ -114,10 +115,37 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     const nuevaUrlLocal = `${this.iframeUrl}${rutaLimpia}`;
-    this.iframeSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(nuevaUrlLocal);
+    
+    // VALIDACIÓN CLAVE: Solo sanitizamos y recargamos si la URL es realmente distinta
+    // Necesitamos comparar el valor real como string, por lo que usamos una variable de apoyo
+    if (this.ultimaUrlLocal !== nuevaUrlLocal) {
+      this.ultimaUrlLocal = nuevaUrlLocal;
+      this.iframeSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(nuevaUrlLocal);
+    }
     
     const urlOficial = `${this.urlBaseKevins}${rutaLimpia}`;
-    this.form.patchValue({ linkActual: urlOficial }, { emitEvent: false });
+    
+    const registroExistente = this.registrosGuardados.find(r => r.link === urlOficial);
+
+    if (registroExistente) {
+      this.form.patchValue({
+        titulo: registroExistente.titulo || '',
+        descripcion: registroExistente.descripcion || '',
+        keywords: registroExistente.keywords || '',
+        linkActual: urlOficial
+      }, { emitEvent: true });
+      
+      this.mostrarMensaje('Ruta cargada. Datos recuperados del registro existente.');
+    } else {
+      this.form.reset({
+        titulo: '',
+        descripcion: '',
+        keywords: '',
+        linkActual: urlOficial
+      }, { emitEvent: true });
+      
+      this.mostrarMensaje('Ruta cargada. Listo para nuevo registro.');
+    }
   }
 
   private normalizarKevinsUrl(input: string): string {
@@ -269,9 +297,12 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     // 3. Actualizamos la barra de navegación editable y el iframe
     this.rutaEditable = rutaLimpia;
     const nuevaUrlLocal = `${this.iframeUrl}${rutaLimpia}`;
-    this.iframeSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(nuevaUrlLocal);
     
-    this.mostrarMensaje('Registro cargado y navegando a la URL...');
+    // EVITAR RECARGA INNECESARIA AQUÍ TAMBIÉN
+    if (this.ultimaUrlLocal !== nuevaUrlLocal) {
+      this.ultimaUrlLocal = nuevaUrlLocal;
+      this.iframeSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(nuevaUrlLocal);
+    }
   }
 
   // =====================================================================

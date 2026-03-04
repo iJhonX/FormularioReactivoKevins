@@ -124,7 +124,6 @@ function getHeadScript() {
     return url;
   }
 
-
   function notificar(url) {
     var fullUrl = (typeof url === 'string' && !url.startsWith('http'))
       ? '${TARGET}' + (url.startsWith('/') ? url : '/' + url)
